@@ -24,6 +24,11 @@ def load_sentences(fname):
         sents = [sent.split() for sent in f]
     return sents
 
+def write_list(fname, l):
+    with open(fname, 'w', encoding='utf-8') as f:
+        for doc in l:
+            f.write('%s\n' % str(doc))
+
 class Sentences:
     def __init__(self, fname):
         self.fname = fname

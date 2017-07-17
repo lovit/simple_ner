@@ -138,3 +138,36 @@ class ZCorpus:
                 word, features = row.split('\t')
                 features = features.split()
                 yield word, features
+
+def zcorpus_to_sparsematrix(zcorpus,
+                            feature_manager,
+                            ner_min_feature_count=10, 
+                            pruning_per_instance=1000000,
+                            pruning_min_featuer_count=2):
+    from collections import defaultdict
+    import sys
+    from scipy.sparse import csr_matrix
+    
+    bow = defaultdict(lambda: defaultdict(lambda: 0))
+    for i, (word, features) in enumerate(zcorpus):
+        for feature in features:
+            bow[word][feature] += 1
+        if (i % 1000) == 0:
+            args = (len(bow), 100 * (i+1) / len(zcorpus), '%', i+1, len(zcorpus), get_process_memory())
+            sys.stdout.write('\rtransform zcorpus to sparse matrix ... %d words (%.3f %s, %d in %d). mem= %.3f Gb' % args)
+        if (i + 1) % pruning_per_instance == 0:
+            bow = defaultdict(lambda: defaultdict(lambda: 0), {word:counter for word, counter in bow.items() if sum(counter.values()) >= pruning_min_featuer_count})
+    bow = {word:counter for word, counter in bow.items() if sum(counter.values()) >= ner_min_feature_count}
+    args = (len(bow), get_process_memory())
+    print('\rtransforming zcorups to sparse matrix was done. #words= %d mem= %.3f Gb\nIt returns (x, int2word, feature_vocab)' % args)
+    
+    int2word = list(bow.keys())
+    rows = []
+    cols = []
+    data = []
+    for i, (_, counter) in enumerate(bow.items()):
+        for j, v in counter.items():
+            rows.append(i)
+            cols.append(int(j))
+            data.append(v)
+    return csr_matrix((data, (rows, cols))), int2word, feature_manager.idx_to_vocab
