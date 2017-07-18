@@ -1,4 +1,5 @@
 from collections import defaultdict
+from collections import namedtuple
 import pickle
 import sys
 import time
@@ -162,3 +163,35 @@ class FeatureCountingNER:
             self.feature_manager.idx_to_vocab = parameters['feature_manager.idx_to_vocab']
             self.feature_manager.vocab_to_idx = parameters['feature_manager.vocab_to_idx']
             self.feature_manager.counter = parameters['feature_manager.counter']
+
+
+class TrainedLogisticRegressionExtractorFromZcorpus:
+    def __init__(self, coefficients):
+        self._coef = coefficients
+        
+    def extract(self, zcorpus):        
+        Score = namedtuple('Score', 'score frequency')        
+        scores = {}
+        _norm = {}
+        frequency = {}
+        for i, (word, features) in enumerate(zcorpus):
+            frequency[word] = frequency.get(word, 0) + 1
+            _norm[word] = _norm.get(word, 0) + len(features)
+            for feature in features:
+                scores[word] = scores.get(word, 0) + self._coef[int(feature)]
+            if i % 1000 == 0:
+                args = (100*(i+1)/len(zcorpus), '%', i+1, len(zcorpus))
+                sys.stdout.write('\rextracting ... %.3f %s (%d in %d)' % args)
+        print('\rextracting was done')
+        scores = {word:Score(score/_norm[word], frequency[word]) for word, score in scores.items()}
+        scores = sorted(scores.items(), key=lambda x:x[1].score, reverse=True)
+        return scores
+    
+    def save(self, fname):
+        with open(fname, 'wb') as f:
+            params = {'coefficient': self._coef}
+            pickle.dump(params, f)
+
+    def load(self, fname):
+        with open(fname, 'rb') as f:
+            self._coef = pickle.load(f)

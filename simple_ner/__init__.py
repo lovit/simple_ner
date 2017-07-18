@@ -13,3 +13,4 @@ from .features import FeatureManager
 from .features import ZCorpus
 from .features import zcorpus_to_sparsematrix
 from .ner import FeatureCountingNER
+from .ner import TrainedLogisticRegressionExtractorFromZcorpus
