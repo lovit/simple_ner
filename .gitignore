@@ -11,6 +11,8 @@ build/
 # Experiments
 tmp/
 tutorials/config.py
+zcorpus.txt
+*.pkl
 
 # Jupyter notebook
 .ipynb_checkpoints/
