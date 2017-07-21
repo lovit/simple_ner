@@ -76,7 +76,7 @@ class FeatureManager:
         self.counter = counter
     
     def transform_rawtext_to_zcorpus(self, rawtext_fname, zcorpus_fname):
-        if not vocab_to_idx:
+        if not self.vocab_to_idx:
             raise ValueError('You should scan vocabs first')
         with open(rawtext_fname, encoding='utf-8') as fi:
             with open(zcorpus_fname, 'w', encoding='utf-8') as fo:
