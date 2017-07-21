@@ -30,17 +30,28 @@ def write_list(fname, l):
             f.write('%s\n' % str(doc))
 
 class Sentences:
-    def __init__(self, fname):
-        self.fname = fname
+    def __init__(self, fnames):
+        if type(fnames) == str:
+            fnames = [fnames]        
+        self.fnames = fnames
         self.length = 0
+        
     def __iter__(self):
-        with open(self.fname, encoding='utf-8') as f:
-            for sent in f:
-                yield sent.split()
+        for fname in self.fnames:
+            if not os.path.exists(fname):
+                print('%s does not exist' % fname)
+                continue
+            with open(fname, encoding='utf-8') as f:
+                for sent in f:
+                    yield sent.split()
+                    
     def __len__(self):
         if self.length == 0:
-            with open(self.fname, encoding='utf-8') as f:
-                for i, _ in enumerate(f):
+            for fname in self.fnames:
+                if not os.path.exists(fname):
                     continue
-                self.length = (i+1)
+                with open(fname, encoding='utf-8') as f:
+                    for i, _ in enumerate(f):
+                        continue
+                    self.length += (i+1)
         return self.length
