@@ -17,42 +17,42 @@ tutorials에서 config.py 파일이 생략되어 있습니다. 이 파일에는 
 
 1. sentence_fname: str or list of str. 학습에 이용할 토크나이징이 완료되어 있는 sentence 파일. 파일의 스냅샷은 아래와 같다. 
 
-    감사합니다
-    네
-    아뇨 내꺼 아닌데 요
-    ...
+        감사합니다
+        네
+        아뇨 내꺼 아닌데 요
+        ...
 
 1. word2vec_model_fname: str. gensim.Word2Vec을 학습한 pickle 파일
 1. feature_manager_fname: str. FeatureManager의 학습된 parameters들을 저장하는 pickle 파일
 1. zcorpus_fname: str. FeatureManager를 통하여 zcorpus 형식으로 변형된 결과 파일. 파일의 스냅샷은 아래와 같다. 
 
-    감사합니다
-    네
-    아뇨  4428
-    내꺼  1666 1637 30231
-    아닌데 1798 2783 185843 1
-    요   4007 2202
-    ...
+        감사합니다
+        네
+        아뇨  4428
+        내꺼  1666 1637 30231
+        아닌데 1798 2783 185843 1
+        요   4007 2202
+        ...
 
 '감사합니다', '네'는 유용한 features가 없기 때문에 변형되지 않았으며, 아뇨:는 4428 번 feature가 수식된다는 의미이다. 
 
 1. z_mm_fname: str. Logistic Regression을 이용하여 NER을 추출할 때에는 sklearn의 CountVectorizer를 이용하여 Sparse matrix를 만든다. 이 파일의 이름.
 1. z_mm_xwords_fname: str. z_mm의 row 가 어떤 단어인지 저장한 파일. 스냅샷은 아래와 같다. 
 
-    카라반
-    아팠으니까
-    내껏두
-    ...
+        카라반
+        아팠으니까
+        내껏두
+        ...
 
 1. z_mm_feature_vocab_fname: str. z_mm의 column 가 어떤 feature인지 저장한 파일. 스냅샷은 아래와 같다. 
 
-    ('X[1]', '?')
-    ('X[1]', '요')
-    ('X[-1]', '나')
-    ('X[-1]', '요')
-    ('X[-2]', '나')
-    ('X[-1]', '응')
-    ...
+        ('X[1]', '?')
+        ('X[1]', '요')
+        ('X[-1]', '나')
+        ('X[-1]', '요')
+        ('X[-2]', '나')
+        ('X[-1]', '응')
+        ...
 
 ## From text file to Zcorpus
 
