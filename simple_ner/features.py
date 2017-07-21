@@ -46,53 +46,56 @@ class FeatureManager:
         z = [[self.vocab_to_idx[f] for f in xi if f in self.vocab_to_idx] for xi in x]
         return z
 
-    def scanning_features(self, corpus_fname, pruning_n_sents=1000000, pruning_min_count=5, min_count=50):
+    def scanning_features(self, sentences, pruning_n_sents=1000000, pruning_min_count=5, min_count=50):
+        """sentences: utils.Sentences or iterable object which yields list of str such as \n
+    [['this', 'is', 'a', 'sentence']\n    
+     ['this', 'is', 'another', 'sentence']]
+        """
         counter = defaultdict(lambda: 0)
-        with open(corpus_fname, encoding='utf-8') as f:
-            for num_sent, sent in enumerate(f):
-                words = sent.strip().split()
-                if not words:
-                    continue
-                    
-                x = self.words_to_feature(words)
-                for word, xi in zip(sent, x):
-                    for feature in xi:
-                        counter[feature] += 1
+        for num_sent, words in enumerate(sentences):
+            if not words:
+                continue
+                
+            x = self.words_to_feature(words)
+            for word, xi in zip(words, x):
+                for feature in xi:
+                    counter[feature] += 1
 
-                if (num_sent + 1) % pruning_n_sents == 0:
-                    before_size = len(counter)
-                    before_memory = get_process_memory()
-                    counter = defaultdict(lambda: 0, {f:v for f,v in counter.items() if v >= pruning_min_count})
-                    args = (before_size, len(counter), num_sent, before_memory, get_process_memory())
-                    sys.stdout.write('\r# features = %d -> %d, (%d sents) %.3f -> %.3f Gb' % args)
+            if (num_sent + 1) % pruning_n_sents == 0:
+                before_size = len(counter)
+                before_memory = get_process_memory()
+                counter = defaultdict(lambda: 0, {f:v for f,v in counter.items() if v >= pruning_min_count})
+                args = (before_size, len(counter), '' if not hasattr(sentences, '__len__') else '%3.f %s, ' % (100.0*(num_sent+1)/len(sentences), '%s'), num_sent, before_memory, get_process_memory())
+                sys.stdout.write('\rscanning ... # features = %d -> %d, (%s%d sents) %.3f -> %.3f Gb' % args)
 
-                if num_sent % 1000 == 0:
-                    args = (len(counter), num_sent, get_process_memory())
-                    sys.stdout.write('\r# features = %d, (%d sents) %.3f Gb' % args)
+            if num_sent % 1000 == 0:
+                args = (len(counter), '' if not hasattr(sentences, '__len__') else '%.2f %s, ' % (100.0*(num_sent+1)/len(sentences), '%'), num_sent, get_process_memory())
+                sys.stdout.write('\r# features = %d, (%s%d sents) %.3f Gb' % args)
 
         counter = {f:v for f,v in counter.items() if v >= min_count}
         self.idx_to_vocab = list(sorted(counter.keys(), key=lambda x:counter.get(x, 0), reverse=True))
         self.vocab_to_idx = {vocab:idx for idx, vocab in enumerate(self.idx_to_vocab)}
         self.counter = counter
     
-    def transform_rawtext_to_zcorpus(self, rawtext_fname, zcorpus_fname):
+    def transform_rawtext_to_zcorpus(self, sentences, zcorpus_fname):
+        """sentences: utils.Sentences or iterable object which yields list of str such as \n
+    [['this', 'is', 'a', 'sentence']\n    
+     ['this', 'is', 'another', 'sentence']]
+        """
         if not self.vocab_to_idx:
             raise ValueError('You should scan vocabs first')
-        with open(rawtext_fname, encoding='utf-8') as fi:
-            with open(zcorpus_fname, 'w', encoding='utf-8') as fo:
-                for num_sent, sent in enumerate(fi):
-                    words = sent.strip().split()
-                    if not words:
-                        fo.write('\n')
-                        continue
-                    z = self.words_to_encoded_feature(words)
-                    for wi, zi in zip(words, z):
-                        features = ' '.join([str(zi_) for zi_ in zi]) if zi else ''
-                        fo.write('%s\t%s\n' % (wi, features))
-                    if num_sent % 50000 == 0:
-                        sys.stdout.write('\rtransforming .... (%d sents) %.3f Gb' % (
-                                num_sent, get_process_memory()))
-                print('\rtransforming has done')
+        with open(zcorpus_fname, 'w', encoding='utf-8') as fo:
+            for num_sent, words in enumerate(sentences):
+                if not words:
+                    continue
+                z = self.words_to_encoded_feature(words)
+                for wi, zi in zip(words, z):
+                    features = ' '.join([str(zi_) for zi_ in zi]) if zi else ''
+                    fo.write('%s\t%s\n' % (wi, features))
+                if num_sent % 50000 == 0:
+                    args = ('' if not hasattr(sentences, '__len__') else '%.2f %s, ' % (100*(num_sent+1)/len(sentences), '%'), num_sent, get_process_memory())
+                    sys.stdout.write('\rtransforming .... (%s%d sents) %.3f Gb' % args)
+            print('\rtransforming has done')
             
     def save(self, fname):        
         with open(fname, 'wb') as f:
