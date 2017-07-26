@@ -1,15 +1,16 @@
+import datetime
 import os
 import time
 import psutil
 
 def remain_time(begin_time, i, n):
+    if i == 0: i = 1
     process_time = (time.time() - begin_time)
-    required_time = (process_time / (i+1)) * (n - i)
-    if required_time > 3600:
-        return '%.3f hours' % (required_time / 3600)
-    if required_time > 60:
-        return '%.3f mins' % (required_time / 60)
-    return '%.3f secs' % required_time
+    required_time = (process_time / i) * (n - i)
+    return '[ -%s, +%s ]' % (datetime_format(process_time), datetime_format(required_time))
+
+def datetime_format(t):
+    return datetime.timedelta(seconds=int(t))
 
 def get_available_memory():
     mem = psutil.virtual_memory()

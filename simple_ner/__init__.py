@@ -7,6 +7,7 @@ from .utils import load_sentences
 from .utils import get_available_memory
 from .utils import get_process_memory
 from .utils import remain_time
+from .utils import datetime_format
 from .utils import write_list
 from .utils import Sentences
 from .features import FeatureManager

@@ -1,8 +1,10 @@
 from collections import defaultdict
 import pickle
 import sys
+import time
 from .utils import get_process_memory
 from .utils import Sentences
+from .utils import remain_time
 
 class FeatureManager:
     
@@ -121,21 +123,24 @@ class FeatureManager:
     
     
 class ZCorpus:
-    def __init__(self, fname):
+    def __init__(self, fname, num_limit=-1):
         self.fname = fname
         self.length = 0
+        self.num_limit = num_limit
         
     def __len__(self):
         if self.length == 0:
             with open(self.fname, encoding='utf-8') as f:
                 for num_row, _ in enumerate(f):
                     continue
-                self.length = (num_row + 1)
+                self.length = (num_row + 1) if self.num_limit <= 0 else min(self.num_limit, num_row + 1)
         return self.length
     
     def __iter__(self):
         with open(self.fname, encoding='utf-8') as f:
-            for row in f:
+            for i, row in enumerate(f):
+                if self.num_limit > 0 and i >= self.num_limit:
+                    break
                 row = row.strip()
                 if ('\t' in row) == False: continue
                 word, features = row.split('\t')
@@ -151,18 +156,20 @@ def zcorpus_to_sparsematrix(zcorpus,
     import sys
     from scipy.sparse import csr_matrix
     
+    begin_time = time.time()
+    
     bow = defaultdict(lambda: defaultdict(lambda: 0))
     for i, (word, features) in enumerate(zcorpus):
         for feature in features:
             bow[word][feature] += 1
         if (i % 1000) == 0:
-            args = (len(bow), 100 * (i+1) / len(zcorpus), '%', i+1, len(zcorpus), get_process_memory())
-            sys.stdout.write('\rtransform zcorpus to sparse matrix ... %d words (%.3f %s, %d in %d). mem= %.3f Gb' % args)
+            args = (len(bow), 100 * (i+1) / len(zcorpus), '%', i+1, len(zcorpus), remain_time(begin_time, i+1, len(zcorpus)),  get_process_memory())
+            sys.stdout.write('\rtransform zcorpus to sparse matrix ... %d words (%.3f %s, %d in %d). %s mem= %.3f Gb' % args)
         if (i + 1) % pruning_per_instance == 0:
             bow = defaultdict(lambda: defaultdict(lambda: 0), {word:counter for word, counter in bow.items() if sum(counter.values()) >= pruning_min_featuer_count})
     bow = {word:counter for word, counter in bow.items() if sum(counter.values()) >= ner_min_feature_count}
     args = (len(bow), get_process_memory())
-    print('\rtransforming zcorups to sparse matrix was done. #words= %d mem= %.3f Gb\nIt returns (x, int2word, feature_vocab)' % args)
+    sys.stdout.write('\rtransforming zcorups to sparse matrix was done. #words= %d mem= %.3f Gb\nIt returns (x, int2word, feature_vocab)' % args)
     
     int2word = list(bow.keys())
     rows = []
