@@ -146,3 +146,35 @@ Lotistic Regression을 이용하여 seed words를 positive class로 구분하는
 
     extracted_ners = sorted(enumerate(prob[:,1]), key=lambda x:x[1], reverse=True)
     extracted_ners = [(int2word[i], p) for i, p in extracted_ners]
+
+
+## NER extraction from Counting model and Zcorpus
+
+ner seeds 주변에 등장하는 features들을 positive features라 할 때, positive features 주변에 자주 나타나는 다른 단어들 역시 ner seeds와 비슷한 named entity라고 생각할 수 있습니다. 이를 카운팅으로 찾아보는 알고리즘입니다. 행렬을 만들어 사용하는 것보다 느리지만, infrequent 한 named entity를 좀 더 잘 잡는 듯하게 보입니다. (아직 연구중인 코드이며, 완성된 버전이 아닙니다)
+
+    from simple_ner import FeatureCountingNER, FeatureManager, ZCorpus
+
+    feature_manager = FeatureManager()
+    feature_manager.load(feature_manager_fname)
+    ner_extractor = FeatureCountingNER(feature_manager,
+                                       verbose=True,
+                                       debug=True,
+                                       debug_checkpoint=1000000)
+
+    positive_features = ner_extractor.find_positive_features(zcorpus,
+                                                             snacks,
+                                                             min_count_positive_features=10)
+
+    ners = ner_extractor.fit_and_extract_ner(zcorpus,
+                                         snacks,
+                                         wordset,
+                                         min_count_positive_features=10)
+
+debug=True로 설정할 경우에는 named entity를 찾는 도중에 zcorpus의 iteration에서 debug_checkpoint마다 평균 점수가 높은 top entities를 출력해줍니다. 
+
+![snapshot1](resource/snapshot1.jpg)
+![snapshot2](resource/snapshot2.jpg)
+
+extraction이 모두 끝나면 debug 형식으로 출력되던 entities는 모두 사라집니다. 
+
+![snapshot3](resource/snapshot3.jpg)
