@@ -10,12 +10,13 @@ from .utils import get_process_memory
 
 class FeatureCountingNER:
     
-    def __init__(self, feature_manager=None, verbose=True, debug=False):
+    def __init__(self, feature_manager=None, verbose=True, debug=False, debug_checkpoint=1000000):
         self.feature_manager = feature_manager
         self.coefficient = {}
         self.coefficient_ = {}
         self.verbose = verbose
         self.debug = debug
+        self._debug_checkpoint = debug_checkpoint
         
         self._usg_pos = None
         self._usg_neg = None
@@ -29,11 +30,15 @@ class FeatureCountingNER:
         
     def find_positive_features(self, zcorpus, ner_seeds, min_count_positive_features=10):
         self.positive_features = {}
+        
+        initialize_time = time.time()
+        len(zcorpus)
+        initialize_time = time.time() - initialize_time
         begin_time = time.time()
 
         for num_z, (word, features) in enumerate(zcorpus):    
             if self.verbose and num_z % 1000 == 0:
-                args = (len(self.positive_features), (100 * num_z / len(zcorpus)), '%', num_z, len(zcorpus), remain_time(begin_time, num_z+1, len(zcorpus)), get_process_memory())
+                args = (len(self.positive_features), (100 * num_z / len(zcorpus)), '%', num_z, len(zcorpus), remain_time(begin_time, num_z+1, len(zcorpus), initialize_time), get_process_memory())
                 sys.stdout.write('\rscanning positive features # = %d, (%.3f %s, %d in %d) %s %.3f Gb' % args)
 
             if (word in ner_seeds) == False:
@@ -44,7 +49,7 @@ class FeatureCountingNER:
         self.positive_features = {pos_f:v for pos_f, v in self.positive_features.items() if v > min_count_positive_features}
         if self.verbose:
             process_time = time.time() - begin_time
-            sys.stdout.write('\rscanning positive features has been done. %s\n' % datetime_format(process_time))
+            sys.stdout.write('\rscanning positive features has been done. %s\n' % datetime_format(process_time + initialize_time))
         return self.positive_features
     
     def compute_score_of_features(self, zcorpus, ner_seeds, wordset):
@@ -110,14 +115,31 @@ class FeatureCountingNER:
             print('%.2f ~ %.2f: %.3f' % (c1, c2, h/sum(heights)))
             
     def extract_named_entities_from_zcorpus(self, zcorpus):
+        def normalize_score(score, count):
+            return {w:s/count[w] for w, s in score.items()}
+        def get_debugmessage(_topk_ners):
+            debugmessage = '  |  [top 0 ~ 20]: [%s]' % ', '.join([ner for ner, _ in _topk_ners[:20]])
+            if len(_topk_ners) > 50: debugmessage += '  |  [top 50 ~ 70]: [%s]' % ', '.join([ner for ner, _ in _topk_ners[50:70]])
+            if len(_topk_ners) > 100: debugmessage += '  |  [top 100 ~ 150]: [%s]' % ', '.join([ner for ner, _ in _topk_ners[100:150]])
+            if len(_topk_ners) > 200: debugmessage += '  |  [top 200 ~ 250]: [%s]' % ', '.join([ner for ner, _ in _topk_ners[200:250]])
+            return debugmessage
+        
         prediction_score = defaultdict(lambda: 0.0)
         prediction_count = defaultdict(lambda: 0.0)
+        
         begin_time = time.time()
+        debugmessage = ''
 
         for num_z, (word, features) in enumerate(zcorpus):
+            if self.debug and ((num_z+1) % self._debug_checkpoint == 0):
+                _topk_ners = normalize_score(prediction_score, prediction_count)
+                _topk_ners = list(sorted(_topk_ners.items(), key=lambda x:x[1], reverse=True))
+                debugmessage = get_debugmessage(_topk_ners)
             if self.verbose and num_z % 1000 == 0:
                 args = (num_z, len(zcorpus), 100 * num_z / len(zcorpus), '%', remain_time(begin_time, num_z+1, len(zcorpus)), get_process_memory())
-                sys.stdout.write('\rextract_named_entities_from_zcorpus ... (%d in %d, %.3f %s) %s %.3f Gb' % args)
+                message = 'extract_named_entities_from_zcorpus ... (%d in %d, %.3f %s) %s %.3f Gb' % args
+                message += ' '*(100-min(100,len(message))) + debugmessage
+                sys.stdout.write('\r%s' % message)
             if not features: continue
             for feature in features:
                 if (feature in self.coefficient) == False:
@@ -127,7 +149,8 @@ class FeatureCountingNER:
         if self.verbose:
             process_time = time.time() - begin_time
             sys.stdout.write('\rextract_named_entities_from_zcorpus has been done. %s\n' % datetime_format(process_time))
-        prediction_normed_score = {word:score/prediction_count[word] for word, score in prediction_score.items()}
+
+        prediction_normed_score = normalize_score(prediction_score, prediction_count)
         sorted_scores = sorted(prediction_normed_score.items(), key=lambda x:x[1], reverse=True)
         return sorted_scores
     

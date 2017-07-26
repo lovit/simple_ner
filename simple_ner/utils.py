@@ -3,11 +3,11 @@ import os
 import time
 import psutil
 
-def remain_time(begin_time, i, n):
+def remain_time(begin_time, i, n, initialize_time=0):
     if i == 0: i = 1
     process_time = (time.time() - begin_time)
     required_time = (process_time / i) * (n - i)
-    return '[ -%s, +%s ]' % (datetime_format(process_time), datetime_format(required_time))
+    return '[ -%s, +%s ]' % (datetime_format(process_time + initialize_time), datetime_format(required_time))
 
 def datetime_format(t):
     return datetime.timedelta(seconds=int(t))
